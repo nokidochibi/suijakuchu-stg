@@ -14,7 +14,7 @@
     background: var(--bg); color: var(--text);
     margin: 0; padding: 0;
     height: 100vh; width: 100vw;
-    overflow: hidden;
+    overflow: hidden; /* 全体のスクロールは禁止（ヘッダー固定のため） */
     display: flex; flex-direction: column;
   }
   
@@ -79,13 +79,12 @@
   /* --- ゲーム画面 --- */
   #game-header {
     width: 100%;
-    min-height: 50px; /* コンパクトに */
+    min-height: 50px;
     
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-bottom: 1px solid #eee;
     display: flex;
     align-items: center;
-    /* 両端揃えを削除し、flex-growで制御 */
     
     padding-left: 10px;
     padding-right: 10px;
@@ -95,34 +94,36 @@
 
     z-index: 10;
     position: relative;
+    flex-shrink: 0; /* ヘッダーが縮まないように固定 */
   }
   .home-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; padding: 5px; }
   .turn-badge { background: #eee; padding: 6px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; color: #555; white-space: nowrap; }
 
   /* ヒントをヘッダー中央に */
   #next-screen-hint {
-    flex-grow: 1; /* 余白を埋める */
-    text-align: center; /* 中央揃え */
-    
+    flex-grow: 1;
+    text-align: center;
     color: var(--primary); font-weight: bold;
-    font-size: 0.9rem; /* ヘッダー内に収まるサイズ */
+    font-size: 0.9rem;
     line-height: 1.2;
-    
     pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 100;
   }
   #next-screen-hint.show { opacity: 1; animation: blink 2s infinite; }
   @keyframes blink { 50% { opacity: 0.6; } }
 
-  /* 青い余白を削除し、上詰めにする */
+  /* ▼▼▼ スクロール対応の修正箇所 ▼▼▼ */
   #game-board-area {
     flex: 1; width: 100%;
     display: flex; 
     align-items: flex-start; /* 上寄せ */
     justify-content: center;
     
-    padding: 0 5px; /* 上下余白なし */
+    padding: 0 5px;
+    padding-bottom: 40px; /* スクロール時に下が詰まらないよう余白追加 */
     
-    overflow: hidden;
+    /* スクロール設定 */
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch; /* スマホ慣性スクロール */
   }
   
   #game-board {
@@ -130,13 +131,15 @@
     gap: 2px;
     justify-content: center; 
     align-content: start;
+    padding-top: 10px; /* ボード自体の上の少しの余白 */
+    width: 100%; /* 横幅いっぱい使って中央寄せ */
   }
   
   #center-title-box {
     grid-column: 1 / -1;
     display: flex; align-items: center; justify-content: center;
     text-align: center;
-    height: 40px; /* 高さを少し抑制 */
+    height: 40px;
     margin: 4px 0;
     font-size: 1.1rem; font-weight: bold; color: #555;
     background: rgba(255,255,255,0.6);
@@ -155,7 +158,14 @@
   }
 
   .card {
-    position: relative; width: var(--card-size, 60px); height: var(--card-size, 60px);
+    position: relative; 
+    /* width/heightはJSで計算された変数を使用 */
+    width: var(--card-size, 60px); 
+    height: var(--card-size, 60px);
+    
+    /* マージンをCSSではなくGridのgapで制御するためmargin削除 */
+    margin: 0 auto; 
+    
     transform-style: preserve-3d; transition: transform 0.3s; cursor: pointer;
   }
   .card.flipped { transform: rotateY(180deg); }
@@ -347,7 +357,6 @@ function escapeHtml(s) {
   return s ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])) : '';
 }
 
-// 完全にランダムにシャッフルする関数
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -403,30 +412,26 @@ function renderBoard() {
   const board = document.getElementById('game-board');
   
   const maxW = boardArea.clientWidth;
-  const maxH = boardArea.clientHeight;
+  
+  // スクロール可能にするため、高さ計算の制限をなくす（カードサイズを優先）
   const totalCards = gameCards.length;
   const half = Math.ceil(totalCards / 2);
 
-  // 上級(adv)は強制的に10列にする
   let cols = 4;
   if (level === 'beg') cols = 5;
   else if (level === 'int') cols = 6;
   else if (level === 'adv') cols = 10;
   
-  const rowsPerHalf = Math.ceil(half / cols);
-  const gap = 2; // gapを少し詰めた
-  const titleH = 40; // タイトル領域の高さを調整
+  const gap = 2;
   
-  const sizeW = (maxW - (cols - 1) * gap) / cols;
+  // 横幅からカードサイズを決定する
+  // (余白を引いた幅) / 列数
+  const sizeW = (maxW - (cols - 1) * gap - 20) / cols; 
   
-  // 高さ計算：カード領域の上部余白なし、タイトル高さを引く
-  const totalCardRows = rowsPerHalf * 2;
-  const totalGapsH = (Math.max(0, rowsPerHalf - 1) * 2 + 2) * gap;
-  const availableH = maxH - titleH - totalGapsH;
-  const sizeH = availableH / totalCardRows;
-  
-  let size = Math.floor(Math.min(sizeW, sizeH));
+  // 最小サイズ20px、最大サイズ80pxくらいの常識的な範囲に収める
+  let size = Math.floor(sizeW);
   if(size < 20) size = 20;
+  if(size > 80) size = 80; // 大きすぎないように制限
   
   document.documentElement.style.setProperty('--card-size', `${size}px`);
   board.style.gap = `${gap}px`;
