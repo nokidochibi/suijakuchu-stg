@@ -79,7 +79,7 @@
   /* --- ゲーム画面 --- */
   #game-header {
     width: 100%;
-    min-height: 60px; /* ノッチ対応のため固定高さ廃止 */
+    min-height: 60px;
     
     background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid #eee;
@@ -87,7 +87,6 @@
     align-items: center;
     justify-content: space-between;
     
-    /* ノッチ（セーフエリア）対応 */
     padding-left: 20px;
     padding-right: 20px;
     padding-top: env(safe-area-inset-top, 20px); 
@@ -100,28 +99,38 @@
   .home-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; padding: 5px; }
   .turn-badge { background: #eee; padding: 6px 12px; border-radius: 15px; font-size: 0.9rem; font-weight: bold; color: #555; }
 
+  /* ▼▼▼ ヒント位置修正 ▼▼▼ */
   #next-screen-hint {
-    position: absolute; top: 70px; left: 0; width: 100%;
-    text-align: center; color: var(--primary); font-weight: bold;
-    font-size: 1.2rem;
-    text-shadow: 0 0 5px rgba(255,255,255,0.9);
+    position: absolute; 
+    left: 60px; /* ホームボタンの横 */
+    bottom: 12px; /* ヘッダー下部合わせ */
+    width: auto;
+    
+    text-align: left; 
+    color: var(--primary); font-weight: bold;
+    font-size: 1rem;
+    
     pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 100;
   }
   #next-screen-hint.show { opacity: 1; animation: blink 2s infinite; }
   @keyframes blink { 50% { opacity: 0.6; } }
 
+  /* ▼▼▼ ゲーム領域上詰め修正 ▼▼▼ */
   #game-board-area {
     flex: 1; width: 100%;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; 
+    align-items: flex-start; /* 上寄せ */
+    justify-content: center;
     padding: 10px;
+    padding-top: 20px; /* 上余白 */
     overflow: hidden;
   }
   
   #game-board {
     display: grid;
-    gap: 4px;
+    gap: 2px;
     justify-content: center; 
-    align-content: center;
+    align-content: start;
   }
   
   #center-title-box {
@@ -209,7 +218,7 @@
     <button id="btn-beg" class="btn" onclick="startGame('beg')" disabled>初級 (10ペア)</button>
     <button id="btn-int" class="btn" onclick="startGame('int')" disabled>中級 (30ペア)</button>
     <button id="btn-adv" class="btn" onclick="startGame('adv')" disabled>上級 (全ペア)</button>
-    </div>
+  </div>
   
   <div id="msg-area">読み込み中...</div>
   
@@ -222,10 +231,9 @@
 <div id="game-screen" class="screen">
   <div id="game-header">
     <button class="home-btn" onclick="confirmHome()">🏠</button>
+    <div id="next-screen-hint">画面をタップして次へ</div>
     <span class="turn-badge" id="turn-display">Turn: 0</span>
   </div>
-  
-  <div id="next-screen-hint">画面をタップして次へ</div>
   
   <div id="game-board-area">
     <div id="game-board"></div>
@@ -260,21 +268,17 @@ let isDemo = false;
 let currentTitleText = "Start!";
 
 window.onload = function() {
-  // タイムアウト設定
   setTimeout(() => {
     if (document.getElementById('btn-beg').disabled) {
       document.getElementById('msg-area').innerText = "通信が遅いか、エラーの可能性があります。";
-      // デモボタン表示処理を削除
     }
   }, 5000);
 
-  // データ取得 (fetch)
   fetch(API_URL + "?action=getCDData")
     .then(res => res.json())
     .then(data => {
       if (!data || data.length === 0) {
         document.getElementById('msg-area').innerText = "データ0件";
-        // デモボタン表示処理を削除
       } else {
         allData = data;
         document.getElementById('msg-area').innerText = `Loaded: ${data.length} songs`;
@@ -285,7 +289,6 @@ window.onload = function() {
     .catch(err => {
       document.getElementById('msg-area').innerText = "Load Err";
       console.error(err);
-      // デモボタン表示処理を削除
     });
     
   fetchRanking();
@@ -297,9 +300,6 @@ function enableButtons() {
   document.getElementById('btn-adv').disabled = false;
 }
 
-// startDemo関数は不要ですが、エラーが出ないよう残すか削除してもOK（呼ばれないため）
-// ここでは削除せず残しておきますが、ボタンがないので呼ばれません。
-
 function fetchRanking() {
   fetch(API_URL + "?action=getRankings")
     .then(res => res.json())
@@ -309,7 +309,6 @@ function fetchRanking() {
     });
 }
 
-// ランキング表示関数
 function showRanking(data) {
   const div = document.getElementById('ranking-list');
   
@@ -326,24 +325,11 @@ function showRanking(data) {
       return html;
     }
     
-    html += `<table>
-      <thead>
-        <tr>
-          <th style="width:40px; text-align:center;">順位</th>
-          <th>名前</th>
-          <th style="width:70px; text-align:right;">ターン数</th>
-        </tr>
-      </thead>
-      <tbody>`;
+    html += `<table><thead><tr><th style="width:40px; text-align:center;">順位</th><th>名前</th><th style="width:70px; text-align:right;">ターン数</th></tr></thead><tbody>`;
       
     list.forEach((r, i) => {
       let rankColor = i===0 ? '#ffd700' : (i===1 ? '#c0c0c0' : (i===2 ? '#b87333' : '#888'));
-      
-      html += `<tr>
-        <td class="num" style="color:${rankColor}">${i+1}</td>
-        <td>${escapeHtml(r.name)}</td>
-        <td class="turn">${r.turns}</td>
-      </tr>`;
+      html += `<tr><td class="num" style="color:${rankColor}">${i+1}</td><td>${escapeHtml(r.name)}</td><td class="turn">${r.turns}</td></tr>`;
     });
     
     html += '</tbody></table></div>';
@@ -362,7 +348,7 @@ function escapeHtml(s) {
   return s ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])) : '';
 }
 
-// 【追加】偏りなく完全にシャッフルする関数（フィッシャー–イェーツ法）
+// 完全にランダムにシャッフルする関数
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -370,7 +356,7 @@ function shuffleArray(array) {
   }
   return array;
 }
-  
+
 function startGame(lv) {
   level = lv;
   turns = 0; matched = 0; flipped = [];
@@ -396,6 +382,7 @@ function startGame(lv) {
   count = Math.min(count, allData.length);
   
   let deck = [];
+  
   let shuffledData = shuffleArray([...allData]); 
   let useData = shuffledData.slice(0, count);
 
@@ -407,8 +394,8 @@ function startGame(lv) {
     deck.push({id: d.id, img: img1, title: d.title});
     deck.push({id: d.id, img: img2, title: d.title});
   });
-  gameCards = shuffleArray(deck);
   
+  gameCards = shuffleArray(deck);
   renderBoard();
 }
 
@@ -421,25 +408,14 @@ function renderBoard() {
   const totalCards = gameCards.length;
   const half = Math.ceil(totalCards / 2);
 
+  // ▼▼▼ 修正: 上級(adv)は強制的に10列にする ▼▼▼
   let cols = 4;
   if (level === 'beg') cols = 5;
   else if (level === 'int') cols = 6;
-  else {
-    let bestCols = 6;
-    let bestSize = 0;
-    for(let c=6; c<=14; c++) {
-      const rowsPerHalf = Math.ceil(half / c);
-      const gapW = (c - 1) * 4;
-      const w = (maxW - gapW) / c;
-      const h = (maxH - 80) / (rowsPerHalf * 2);
-      const size = Math.floor(Math.min(w, h));
-      if(size > bestSize) { bestSize = size; bestCols = c; }
-    }
-    cols = bestCols;
-  }
+  else if (level === 'adv') cols = 10;
   
   const rowsPerHalf = Math.ceil(half / cols);
-  const gap = 4;
+  const gap = 2; // gapを少し詰めた
   const titleH = 60;
   
   const sizeW = (maxW - (cols - 1) * gap) / cols;
