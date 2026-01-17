@@ -79,50 +79,49 @@
   /* --- ゲーム画面 --- */
   #game-header {
     width: 100%;
-    min-height: 60px;
+    min-height: 50px; /* コンパクトに */
     
     background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid #eee;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    /* 両端揃えを削除し、flex-growで制御 */
     
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
     padding-top: env(safe-area-inset-top, 20px); 
-    padding-bottom: 10px;
+    padding-bottom: 5px;
     box-sizing: content-box;
 
     z-index: 10;
     position: relative;
   }
   .home-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; padding: 5px; }
-  .turn-badge { background: #eee; padding: 6px 12px; border-radius: 15px; font-size: 0.9rem; font-weight: bold; color: #555; }
+  .turn-badge { background: #eee; padding: 6px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; color: #555; white-space: nowrap; }
 
-  /* ▼▼▼ ヒント位置修正 ▼▼▼ */
+  /* ヒントをヘッダー中央に */
   #next-screen-hint {
-    position: absolute; 
-    left: 60px; /* ホームボタンの横 */
-    bottom: 12px; /* ヘッダー下部合わせ */
-    width: auto;
+    flex-grow: 1; /* 余白を埋める */
+    text-align: center; /* 中央揃え */
     
-    text-align: left; 
     color: var(--primary); font-weight: bold;
-    font-size: 1rem;
+    font-size: 0.9rem; /* ヘッダー内に収まるサイズ */
+    line-height: 1.2;
     
     pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 100;
   }
   #next-screen-hint.show { opacity: 1; animation: blink 2s infinite; }
   @keyframes blink { 50% { opacity: 0.6; } }
 
-  /* ▼▼▼ ゲーム領域上詰め修正 ▼▼▼ */
+  /* 青い余白を削除し、上詰めにする */
   #game-board-area {
     flex: 1; width: 100%;
     display: flex; 
     align-items: flex-start; /* 上寄せ */
     justify-content: center;
-    padding: 10px;
-    padding-top: 20px; /* 上余白 */
+    
+    padding: 0 5px; /* 上下余白なし */
+    
     overflow: hidden;
   }
   
@@ -137,9 +136,9 @@
     grid-column: 1 / -1;
     display: flex; align-items: center; justify-content: center;
     text-align: center;
-    height: 60px;
+    height: 40px; /* 高さを少し抑制 */
     margin: 4px 0;
-    font-size: 1.2rem; font-weight: bold; color: #555;
+    font-size: 1.1rem; font-weight: bold; color: #555;
     background: rgba(255,255,255,0.6);
     border-radius: 10px;
     transition: all 0.3s;
@@ -408,7 +407,7 @@ function renderBoard() {
   const totalCards = gameCards.length;
   const half = Math.ceil(totalCards / 2);
 
-  // ▼▼▼ 修正: 上級(adv)は強制的に10列にする ▼▼▼
+  // 上級(adv)は強制的に10列にする
   let cols = 4;
   if (level === 'beg') cols = 5;
   else if (level === 'int') cols = 6;
@@ -416,12 +415,14 @@ function renderBoard() {
   
   const rowsPerHalf = Math.ceil(half / cols);
   const gap = 2; // gapを少し詰めた
-  const titleH = 60;
+  const titleH = 40; // タイトル領域の高さを調整
   
   const sizeW = (maxW - (cols - 1) * gap) / cols;
+  
+  // 高さ計算：カード領域の上部余白なし、タイトル高さを引く
   const totalCardRows = rowsPerHalf * 2;
   const totalGapsH = (Math.max(0, rowsPerHalf - 1) * 2 + 2) * gap;
-  const availableH = maxH - titleH - totalGapsH - 20;
+  const availableH = maxH - titleH - totalGapsH;
   const sizeH = availableH / totalCardRows;
   
   let size = Math.floor(Math.min(sizeW, sizeH));
