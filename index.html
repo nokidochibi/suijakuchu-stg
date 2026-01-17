@@ -362,6 +362,15 @@ function escapeHtml(s) {
   return s ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])) : '';
 }
 
+// 【追加】偏りなく完全にシャッフルする関数（フィッシャー–イェーツ法）
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+  
 function startGame(lv) {
   level = lv;
   turns = 0; matched = 0; flipped = [];
@@ -387,7 +396,9 @@ function startGame(lv) {
   count = Math.min(count, allData.length);
   
   let deck = [];
-  let useData = allData.sort(()=>Math.random()-0.5).slice(0, count);
+  let shuffledData = shuffleArray([...allData]); 
+  let useData = shuffledData.slice(0, count);
+
   useData.forEach(d => {
     let img1 = d.imgFirst;
     let img2 = d.imgRegular;
@@ -396,7 +407,8 @@ function startGame(lv) {
     deck.push({id: d.id, img: img1, title: d.title});
     deck.push({id: d.id, img: img2, title: d.title});
   });
-  gameCards = deck.sort(()=>Math.random()-0.5);
+  gameCards = shuffleArray(deck);
+  
   renderBoard();
 }
 
