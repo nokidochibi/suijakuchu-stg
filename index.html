@@ -1,250 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>衰弱中</title>
-<style>
-  :root { --primary: #ff6b6b; --bg: #fdfdfd; --text: #444; }
-  
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-    background: var(--bg); color: var(--text);
-    margin: 0; padding: 0;
-    height: 100vh; width: 100vw;
-    overflow: hidden;
-    display: flex; flex-direction: column;
-  }
-  
-  /* 操作要素の文字選択禁止 */
-  .btn, .home-btn, .card, #game-header, h1, .ver, #next-screen-hint {
-    user-select: none; -webkit-user-select: none;
-  }
-  
-  /* 入力欄とボタンは強制的に操作可能にする */
-  input, textarea {
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    pointer-events: auto !important;
-  }
-  .btn, button {
-    pointer-events: auto !important;
-    cursor: pointer;
-  }
-
-  /* --- 共通スクリーン設定 --- */
-  .screen {
-    display: none; width: 100%; height: 100%;
-    flex-direction: column; align-items: center;
-  }
-  .screen.active { display: flex; }
-  
-  /* --- スタート画面 --- */
-  #start-screen { padding: 20px; overflow-y: auto; justify-content: flex-start; }
-  h1 { color: var(--primary); font-size: 2rem; margin: 20px 0 10px; text-align: center; }
-  .ver { color: #aaa; font-size: 0.8rem; margin-bottom: 20px; text-align: center; }
-  
-  .btn-container { display: flex; flex-direction: column; gap: 15px; width: 80%; max-width: 300px; margin: 0 auto; }
-  .btn {
-    background: var(--primary); color: white; border: none; padding: 15px;
-    border-radius: 30px; font-weight: bold; font-size: 1.1rem;
-    box-shadow: 0 4px 10px rgba(255,107,107,0.3);
-    transition: transform 0.1s;
-  }
-  .btn:active { transform: scale(0.96); }
-  .btn:disabled { background: #ddd; box-shadow: none; cursor: not-allowed; }
-  
-  #msg-area { min-height: 20px; margin-top: 20px; color: #888; font-size: 0.9rem; text-align: center; }
-  
-  /* --- ランキング表示エリア --- */
-  #ranking-box {
-    margin-top: 30px; margin-bottom: 50px;
-    width: 95%; max-width: 400px; margin-left: auto; margin-right: auto;
-  }
-  .rank-section { margin-bottom: 25px; }
-  .rank-header {
-    font-weight: bold; color: var(--primary); margin-bottom: 5px;
-    border-left: 4px solid var(--primary); padding-left: 8px; font-size: 1rem;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.85rem; }
-  th { background: #f0f0f0; padding: 6px; text-align: left; color: #666; font-weight: normal; font-size: 0.8rem; }
-  td { padding: 8px 6px; border-bottom: 1px solid #eee; }
-  td.num { width: 40px; text-align: center; font-weight: bold; color: #888; }
-  td.turn { text-align: right; font-weight: bold; color: var(--primary); width: 80px; }
-  
-  /* --- ゲーム画面 --- */
-  #game-header {
-    width: 100%;
-    min-height: 60px; /* ノッチ対応のため固定高さ廃止 */
-    
-    background: rgba(255, 255, 255, 0.9);
-    border-bottom: 1px solid #eee;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    
-    /* ノッチ（セーフエリア）対応 */
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-top: env(safe-area-inset-top, 20px); 
-    padding-bottom: 10px;
-    box-sizing: content-box;
-
-    z-index: 10;
-    position: relative;
-  }
-  .home-btn { font-size: 1.5rem; background: none; border: none; cursor: pointer; padding: 5px; }
-  .turn-badge { background: #eee; padding: 6px 12px; border-radius: 15px; font-size: 0.9rem; font-weight: bold; color: #555; }
-
-  #next-screen-hint {
-    position: absolute; top: 70px; left: 0; width: 100%;
-    text-align: center; color: var(--primary); font-weight: bold;
-    font-size: 1.2rem;
-    text-shadow: 0 0 5px rgba(255,255,255,0.9);
-    pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 100;
-  }
-  #next-screen-hint.show { opacity: 1; animation: blink 2s infinite; }
-  @keyframes blink { 50% { opacity: 0.6; } }
-
-  #game-board-area {
-    flex: 1; width: 100%;
-    display: flex; align-items: center; justify-content: center;
-    padding: 10px;
-    overflow: hidden;
-  }
-  
-  #game-board {
-    display: grid;
-    gap: 4px;
-    justify-content: center; 
-    align-content: center;
-  }
-  
-  #center-title-box {
-    grid-column: 1 / -1;
-    display: flex; align-items: center; justify-content: center;
-    text-align: center;
-    height: 60px;
-    margin: 4px 0;
-    font-size: 1.2rem; font-weight: bold; color: #555;
-    background: rgba(255,255,255,0.6);
-    border-radius: 10px;
-    transition: all 0.3s;
-    user-select: none; -webkit-user-select: none;
-  }
-  #center-title-box.match-anim {
-    color: #eebb00; transform: scale(1.1); text-shadow: 0 0 10px rgba(238, 187, 0, 0.5);
-  }
-  #center-title-box.congrats {
-    background: rgba(255, 215, 0, 0.9); color: #fff;
-    border: 2px solid #fff; box-shadow: 0 0 15px #ffd700;
-    font-size: 1.5rem; transform: scale(1.05); z-index: 50;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  }
-
-  .card {
-    position: relative; width: var(--card-size, 60px); height: var(--card-size, 60px);
-    transform-style: preserve-3d; transition: transform 0.3s; cursor: pointer;
-  }
-  .card.flipped { transform: rotateY(180deg); }
-  
-  .face {
-    position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-    border-radius: 6px; display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  }
-  .front { background: var(--primary); color: white; border: 2px solid white; font-size: 1.2rem; }
-  .front::after { content: "★"; }
-  .back { background: white; transform: rotateY(180deg); border: 2px solid var(--primary); }
-  .back img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-  
-  .card.matched-effect { animation: pop 0.4s ease-out; }
-  @keyframes pop { 50% { transform: rotateY(180deg) scale(1.15); } }
-  
-  .mini-yay {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    font-size: 2rem; color: #ffd700; font-weight: bold;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.3); pointer-events: none;
-    z-index: 100; animation: floatUp 1s ease-out forwards;
-  }
-  @keyframes floatUp {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -150%); }
-  }
-
-  /* --- クリア画面 --- */
-  #clear-overlay {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: transparent;
-    z-index: 2000; flex-direction: column; align-items: center; justify-content: center;
-    transition: background 0.5s;
-    pointer-events: none;
-  }
-  #clear-overlay.active { display: flex; }
-  #clear-overlay.modal-mode { background: rgba(0,0,0,0.8); pointer-events: auto; }
-  
-  #submit-box {
-    background: white; padding: 25px; border-radius: 15px; text-align: center;
-    width: 85%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    opacity: 0; transform: translateY(20px); transition: all 0.5s;
-    display: none;
-  }
-  #submit-box.show { opacity: 1; transform: translateY(0); display: block; }
-  
-  .confetti { position: fixed; width: 40px; height: 40px; z-index: 1500; pointer-events: none; }
-</style>
-</head>
-<body>
-
-<div id="start-screen" class="screen active">
-  <h1>衰弱中</h1>
-  <div class="ver">Ver 1.0</div>
-  
-  <div class="btn-container">
-    <button id="btn-beg" class="btn" onclick="startGame('beg')" disabled>初級 (10ペア)</button>
-    <button id="btn-int" class="btn" onclick="startGame('int')" disabled>中級 (30ペア)</button>
-    <button id="btn-adv" class="btn" onclick="startGame('adv')" disabled>上級 (全ペア)</button>
-    </div>
-  
-  <div id="msg-area">読み込み中...</div>
-  
-  <div id="ranking-box">
-    <div style="text-align:center; color:#888; margin-bottom:15px; font-weight:bold;">🏆 Ranking</div>
-    <div id="ranking-list">Loading...</div>
-  </div>
-</div>
-
-<div id="game-screen" class="screen">
-  <div id="game-header">
-    <button class="home-btn" onclick="confirmHome()">🏠</button>
-    <span class="turn-badge" id="turn-display">Turn: 0</span>
-  </div>
-  
-  <div id="next-screen-hint">画面をタップして次へ</div>
-  
-  <div id="game-board-area">
-    <div id="game-board"></div>
-  </div>
-</div>
-
-<div id="clear-overlay">
-  <div id="submit-box">
-    <h3 style="margin-top:0; color:var(--primary);">クリアおめでとう！</h3>
-    <p id="result-detail">--ターンでクリア</p>
-    <p style="font-size:0.9rem;">記録を送信しますか？</p>
-    <input type="text" id="player-name" placeholder="お名前" onkeydown="if(event.key==='Enter') submitScore()" style="padding:10px; width:80%; margin-bottom:15px; border:1px solid #ddd; border-radius:5px; text-align:center;">
-    <div style="display:flex; gap:10px;">
-      <button type="button" class="btn" onclick="goHome()" style="flex:1; background:#ccc; font-size:0.9rem; padding:10px;">戻る</button>
-      <button type="button" id="submit-btn" class="btn" onclick="submitScore()" style="flex:1; font-size:0.9rem; padding:10px;">送信</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // ▼▼▼ ここにGASのデプロイURLを貼り付けてください ▼▼▼
 const API_URL = "https://script.google.com/macros/s/AKfycbxfSAhN7_lHGJ5c0YJknoJVJRVeX7oZrjVr0tm-ctp2JgQcfPTOo93awfznLIv_hT32AA/exec";
@@ -256,25 +9,20 @@ let flipped = [];
 let turns = 0;
 let matched = 0;
 let level = '';
-let isDemo = false;
 let currentTitleText = "Start!";
 
 window.onload = function() {
-  // タイムアウト設定
   setTimeout(() => {
     if (document.getElementById('btn-beg').disabled) {
       document.getElementById('msg-area').innerText = "通信が遅いか、エラーの可能性があります。";
-      // デモボタン表示処理を削除
     }
   }, 5000);
 
-  // データ取得 (fetch)
   fetch(API_URL + "?action=getCDData")
     .then(res => res.json())
     .then(data => {
       if (!data || data.length === 0) {
         document.getElementById('msg-area').innerText = "データ0件";
-        // デモボタン表示処理を削除
       } else {
         allData = data;
         document.getElementById('msg-area').innerText = `Loaded: ${data.length} songs`;
@@ -285,7 +33,6 @@ window.onload = function() {
     .catch(err => {
       document.getElementById('msg-area').innerText = "Load Err";
       console.error(err);
-      // デモボタン表示処理を削除
     });
     
   fetchRanking();
@@ -297,9 +44,6 @@ function enableButtons() {
   document.getElementById('btn-adv').disabled = false;
 }
 
-// startDemo関数は不要ですが、エラーが出ないよう残すか削除してもOK（呼ばれないため）
-// ここでは削除せず残しておきますが、ボタンがないので呼ばれません。
-
 function fetchRanking() {
   fetch(API_URL + "?action=getRankings")
     .then(res => res.json())
@@ -309,57 +53,44 @@ function fetchRanking() {
     });
 }
 
-// ランキング表示関数
 function showRanking(data) {
   const div = document.getElementById('ranking-list');
-  
   if(!data || Object.keys(data).length === 0) { 
     div.innerHTML = "<small>No records</small>"; 
     return; 
   }
-  
   const createTable = (list, title) => {
     let html = `<div class="rank-section"><div class="rank-header">${title}</div>`;
-    
     if(!list || list.length === 0) {
       html += '<div style="padding:10px; font-size:0.8rem; color:#999; text-align:center;">記録なし</div></div>';
       return html;
     }
-    
-    html += `<table>
-      <thead>
-        <tr>
-          <th style="width:40px; text-align:center;">順位</th>
-          <th>名前</th>
-          <th style="width:70px; text-align:right;">ターン数</th>
-        </tr>
-      </thead>
-      <tbody>`;
-      
+    html += `<table><thead><tr><th style="width:40px; text-align:center;">順位</th><th>名前</th><th style="width:70px; text-align:right;">ターン数</th></tr></thead><tbody>`;
     list.forEach((r, i) => {
       let rankColor = i===0 ? '#ffd700' : (i===1 ? '#c0c0c0' : (i===2 ? '#b87333' : '#888'));
-      
-      html += `<tr>
-        <td class="num" style="color:${rankColor}">${i+1}</td>
-        <td>${escapeHtml(r.name)}</td>
-        <td class="turn">${r.turns}</td>
-      </tr>`;
+      html += `<tr><td class="num" style="color:${rankColor}">${i+1}</td><td>${escapeHtml(r.name)}</td><td class="turn">${r.turns}</td></tr>`;
     });
-    
     html += '</tbody></table></div>';
     return html;
   };
-  
   let finalHtml = "";
   finalHtml += createTable(data.beg, "初級 (10ペア)");
   finalHtml += createTable(data.int, "中級 (30ペア)");
   finalHtml += createTable(data.adv, "上級 (全ペア)");
-  
   div.innerHTML = finalHtml;
 }
 
 function escapeHtml(s) {
   return s ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])) : '';
+}
+
+// 【重要】完全にランダムにシャッフルする関数
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }
 
 function startGame(lv) {
@@ -387,7 +118,12 @@ function startGame(lv) {
   count = Math.min(count, allData.length);
   
   let deck = [];
-  let useData = allData.sort(()=>Math.random()-0.5).slice(0, count);
+  
+  // ▼▼▼ 修正箇所：確実にシャッフルしてからデータを使う ▼▼▼
+  let shuffledData = shuffleArray([...allData]); 
+  let useData = shuffledData.slice(0, count);
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
   useData.forEach(d => {
     let img1 = d.imgFirst;
     let img2 = d.imgRegular;
@@ -396,7 +132,10 @@ function startGame(lv) {
     deck.push({id: d.id, img: img1, title: d.title});
     deck.push({id: d.id, img: img2, title: d.title});
   });
-  gameCards = deck.sort(()=>Math.random()-0.5);
+  
+  // カードの並び順も、この強いシャッフルで混ぜる
+  gameCards = shuffleArray(deck);
+  
   renderBoard();
 }
 
@@ -564,12 +303,6 @@ function submitScore() {
     return; 
   }
   
-  if(isDemo) {
-    alert("デモモードなので送信しませんでした");
-    goHome();
-    return;
-  }
-
   submitBtn.disabled = true;
   submitBtn.innerText = "送信中...";
   nameInput.disabled = true;
@@ -621,5 +354,3 @@ window.onresize = function() {
   if(gameCards.length > 0) renderBoard();
 };
 </script>
-</body>
-</html>
